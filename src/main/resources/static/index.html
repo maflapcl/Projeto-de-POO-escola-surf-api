@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escola de Surf</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#eef5f7;color:#19313b}
+header{background:#087e8b;color:white;padding:25px;text-align:center}
+nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;background:#fff;padding:15px}
+button{border:0;border-radius:6px;padding:10px 14px;background:#087e8b;color:white;cursor:pointer;margin:3px}
+button:hover{background:#05616b}
+main{max-width:1100px;margin:25px auto;padding:0 15px}
+section{display:none;background:white;padding:22px;border-radius:10px;box-shadow:0 2px 8px #0001}
+section.ativa{display:block}
+h2{margin-top:0;color:#087e8b}
+form{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+input,select{padding:10px;border:1px solid #ccd8dc;border-radius:6px;flex:1;min-width:150px}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{padding:11px;text-align:left;border-bottom:1px solid #ddd}
+th{background:#e5f2f3}
+.acoes{white-space:nowrap}
+.excluir{background:#bd4141}
+.pequeno{font-size:13px;color:#60777e}
+@media(max-width:650px){table{font-size:13px}th,td{padding:7px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Escola de Surf</h1>
+<p>Sistema de gerenciamento</p>
+</header>
+
+<nav>
+<button onclick="abrir('alunos')">Alunos</button>
+<button onclick="abrir('instrutores')">Instrutores</button>
+<button onclick="abrir('aulas')">Aulas</button>
+<button onclick="abrir('turmas')">Turmas</button>
+</nav>
+
+<main>
+<section id="alunos" class="ativa">
+<h2>Alunos</h2>
+<form id="formAluno">
+<input id="alunoNome" placeholder="Nome" required>
+<input id="alunoEmail" type="email" placeholder="E-mail" required>
+<input id="alunoNivel" placeholder="Nível (iniciante, intermediário...)" required>
+<button type="submit">Cadastrar aluno</button>
+</form>
+<div id="listaAlunos"></div>
+</section>
+
+<section id="instrutores">
+<h2>Instrutores</h2>
+<form id="formInstrutor">
+<input id="instrutorNome" placeholder="Nome" required>
+<input id="instrutorEmail" type="email" placeholder="E-mail" required>
+<input id="instrutorEspecialidade" placeholder="Especialidade" required>
+<button type="submit">Cadastrar instrutor</button>
+</form>
+<div id="listaInstrutores"></div>
+</section>
+
+<section id="aulas">
+<h2>Aulas</h2>
+<form id="formAula">
+<input id="aulaNome" placeholder="Nome da aula" required>
+<input id="aulaDescricao" placeholder="Descrição">
+<input id="aulaData" type="date" required>
+<input id="aulaHorario" type="time" required>
+<input id="aulaDuracao" type="number" placeholder="Duração (minutos)" required>
+<select id="aulaInstrutor" required><option value="">Selecione o instrutor</option></select>
+<button type="submit">Cadastrar aula</button>
+</form>
+<div id="listaAulas"></div>
+</section>
+
+<section id="turmas">
+<h2>Turmas</h2>
+<form id="formTurma">
+<input id="turmaNome" placeholder="Nome da turma" required>
+<input id="turmaDescricao" placeholder="Descrição">
+<input id="turmaCapacidade" type="number" placeholder="Capacidade" required>
+<button type="submit">Cadastrar turma</button>
+</form>
+<div id="listaTurmas"></div>
+</section>
+</main>
+
+<script>
+const api = "";
+
+function abrir(id){
+ document.querySelectorAll("main section").forEach(s=>s.classList.remove("ativa"));
+ document.getElementById(id).classList.add("ativa");
+ carregarTudo();
+}
+
+async function requisicao(url, metodo="GET", dados=null){
+ const opcoes={method:metodo,headers:{"Content-Type":"application/json"}};
+ if(dados) opcoes.body=JSON.stringify(dados);
+ const resposta=await fetch(api+url,opcoes);
+ if(!resposta.ok){
+  const erro=await resposta.text();
+  throw new Error(erro || "Não foi possível realizar a operação.");
+ }
+ if(resposta.status===204) return null;
+ return resposta.json();
+}
+
+function mostrarErro(erro){alert("Erro: "+erro.message)}
+function confirmarExclusao(){return confirm("Deseja realmente excluir?")}
+
+async function carregarTudo(){
+ await Promise.all([carregarAlunos(),carregarInstrutores(),carregarAulas(),carregarTurmas()]);
+}
+
+async function carregarAlunos(){
+ try{
+  const dados=await requisicao("/alunos");
+  document.getElementById("listaAlunos").innerHTML=`
+  <table><tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Nível</th><th>Ações</th></tr>
+  ${dados.map(a=>`<tr><td>${a.id}</td><td>${a.nome}</td><td>${a.email}</td><td>${a.nivel}</td>
+  <td class="acoes"><button onclick="editarAluno(${a.id})">Editar</button><button class="excluir" onclick="excluirAluno(${a.id})">Excluir</button></td></tr>`).join("")}
+  </table>`;
+ }catch(e){mostrarErro(e)}
+}
+
+document.getElementById("formAluno").addEventListener("submit",async e=>{
+ e.preventDefault();
+ try{
+  await requisicao("/alunos","POST",{
+   nome:alunoNome.value,email:alunoEmail.value,nivel:alunoNivel.value
+  });
+  e.target.reset();carregarAlunos();
+ }catch(err){mostrarErro(err)}
+});
+
+async function editarAluno(id){
+ try{
+  const a=await requisicao("/alunos/"+id);
+  const nome=prompt("Nome:",a.nome);if(nome===null)return;
+  const email=prompt("E-mail:",a.email);if(email===null)return;
+  const nivel=prompt("Nível:",a.nivel);if(nivel===null)return;
+  await requisicao("/alunos/"+id,"PUT",{nome,email,nivel});
+  carregarAlunos();
+ }catch(e){mostrarErro(e)}
+}
+async function excluirAluno(id){
+ if(!confirmarExclusao())return;
+ try{await requisicao("/alunos/"+id,"DELETE");carregarTudo()}catch(e){mostrarErro(e)}
+}
+
+async function carregarInstrutores(){
+ try{
+  const dados=await requisicao("/instrutores");
+  document.getElementById("listaInstrutores").innerHTML=`
+  <table><tr><th>ID</th><th>Nome</th><th>E-mail</th><th>Especialidade</th><th>Ações</th></tr>
+  ${dados.map(i=>`<tr><td>${i.id}</td><td>${i.nome}</td><td>${i.email}</td><td>${i.especialidade}</td>
+  <td class="acoes"><button onclick="editarInstrutor(${i.id})">Editar</button><button class="excluir" onclick="excluirInstrutor(${i.id})">Excluir</button></td></tr>`).join("")}
+  </table>`;
+  document.getElementById("aulaInstrutor").innerHTML='<option value="">Selecione o instrutor</option>'+
+   dados.map(i=>`<option value="${i.id}">${i.nome}</option>`).join("");
+ }catch(e){mostrarErro(e)}
+}
+
+document.getElementById("formInstrutor").addEventListener("submit",async e=>{
+ e.preventDefault();
+ try{
+  await requisicao("/instrutores","POST",{
+   nome:instrutorNome.value,email:instrutorEmail.value,especialidade:instrutorEspecialidade.value
+  });
+  e.target.reset();carregarInstrutores();
+ }catch(err){mostrarErro(err)}
+});
+
+async function editarInstrutor(id){
+ try{
+  const i=await requisicao("/instrutores/"+id);
+  const nome=prompt("Nome:",i.nome);if(nome===null)return;
+  const email=prompt("E-mail:",i.email);if(email===null)return;
+  const especialidade=prompt("Especialidade:",i.especialidade);if(especialidade===null)return;
+  await requisicao("/instrutores/"+id,"PUT",{nome,email,especialidade});
+  carregarInstrutores();
+ }catch(e){mostrarErro(e)}
+}
+async function excluirInstrutor(id){
+ if(!confirmarExclusao())return;
+ try{await requisicao("/instrutores/"+id,"DELETE");carregarTudo()}catch(e){mostrarErro(e)}
+}
+
+document.getElementById("formAula").addEventListener("submit",async e=>{
+ e.preventDefault();
+ try{
+  await requisicao("/aulas","POST",{
+   nome:aulaNome.value,descricao:aulaDescricao.value,data:aulaData.value,
+   horario:aulaHorario.value,duracaoMinutos:Number(aulaDuracao.value),
+   instrutor:{id:Number(aulaInstrutor.value)}
+  });
+  e.target.reset();carregarAulas();
+ }catch(err){mostrarErro(err)}
+});
+
+async function carregarAulas(){
+ try{
+  const dados=await requisicao("/aulas");
+  document.getElementById("listaAulas").innerHTML=`
+  <table><tr><th>ID</th><th>Aula</th><th>Data</th><th>Horário</th><th>Duração</th><th>Instrutor</th><th>Ações</th></tr>
+  ${dados.map(a=>`<tr><td>${a.id}</td><td>${a.nome}</td><td>${a.data||""}</td><td>${a.horario||""}</td><td>${a.duracaoMinutos||""} min</td><td>${a.instrutor?.nome||("ID "+(a.instrutor?.id||""))}</td>
+  <td class="acoes"><button onclick="editarAula(${a.id})">Editar</button><button class="excluir" onclick="excluirAula(${a.id})">Excluir</button></td></tr>`).join("")}
+  </table>`;
+ }catch(e){mostrarErro(e)}
+}
+async function editarAula(id){
+ try{
+  const a=await requisicao("/aulas/"+id);
+  const nome=prompt("Nome:",a.nome);if(nome===null)return;
+  const descricao=prompt("Descrição:",a.descricao||"");if(descricao===null)return;
+  const data=prompt("Data (AAAA-MM-DD):",a.data);if(data===null)return;
+  const horario=prompt("Horário (HH:MM):",String(a.horario||"").slice(0,5));if(horario===null)return;
+  const duracaoMinutos=Number(prompt("Duração em minutos:",a.duracaoMinutos));if(!duracaoMinutos)return;
+  const instrutorId=Number(prompt("ID do instrutor:",a.instrutor?.id));if(!instrutorId)return;
+  await requisicao("/aulas/"+id,"PUT",{nome,descricao,data,horario,duracaoMinutos,instrutor:{id:instrutorId}});
+  carregarAulas();
+ }catch(e){mostrarErro(e)}
+}
+async function excluirAula(id){
+ if(!confirmarExclusao())return;
+ try{await requisicao("/aulas/"+id,"DELETE");carregarAulas()}catch(e){mostrarErro(e)}
+}
+
+document.getElementById("formTurma").addEventListener("submit",async e=>{
+ e.preventDefault();
+ try{
+  await requisicao("/turmas","POST",{
+   nome:turmaNome.value,descricao:turmaDescricao.value,capacidade:Number(turmaCapacidade.value)
+  });
+  e.target.reset();carregarTurmas();
+ }catch(err){mostrarErro(err)}
+});
+
+async function carregarTurmas(){
+ try{
+  const dados=await requisicao("/turmas");
+  const alunos=await requisicao("/alunos");
+  document.getElementById("listaTurmas").innerHTML=dados.map(t=>`
+  <div style="border:1px solid #d5e1e4;padding:15px;border-radius:8px;margin:12px 0">
+   <h3>${t.nome} (ID ${t.id})</h3>
+   <p>${t.descricao||""} | Capacidade: ${t.capacidade}</p>
+   <p><b>Alunos matriculados:</b> ${(t.alunos||[]).map(a=>a.nome).join(", ")||"Nenhum aluno"}</p>
+   <button onclick="editarTurma(${t.id})">Editar turma</button>
+   <button class="excluir" onclick="excluirTurma(${t.id})">Excluir turma</button>
+   <div style="margin-top:12px">
+    <select id="matricula-${t.id}">
+     <option value="">Selecione um aluno para matricular</option>
+     ${alunos.map(a=>`<option value="${a.id}">${a.nome} (ID ${a.id})</option>`).join("")}
+    </select>
+    <button onclick="matricular(${t.id})">Matricular aluno</button>
+   </div>
+   <div style="margin-top:8px">
+    <select id="remover-${t.id}">
+     <option value="">Selecione um aluno para remover</option>
+     ${(t.alunos||[]).map(a=>`<option value="${a.id}">${a.nome}</option>`).join("")}
+    </select>
+    <button class="excluir" onclick="removerAluno(${t.id})">Remover aluno</button>
+   </div>
+  </div>`).join("");
+ }catch(e){mostrarErro(e)}
+}
+async function editarTurma(id){
+ try{
+  const t=await requisicao("/turmas/"+id);
+  const nome=prompt("Nome:",t.nome);if(nome===null)return;
+  const descricao=prompt("Descrição:",t.descricao||"");if(descricao===null)return;
+  const capacidade=Number(prompt("Capacidade:",t.capacidade));if(!capacidade)return;
+  await requisicao("/turmas/"+id,"PUT",{nome,descricao,capacidade});
+  carregarTurmas();
+ }catch(e){mostrarErro(e)}
+}
+async function excluirTurma(id){
+ if(!confirmarExclusao())return;
+ try{await requisicao("/turmas/"+id,"DELETE");carregarTurmas()}catch(e){mostrarErro(e)}
+}
+async function matricular(id){
+ const alunoId=document.getElementById("matricula-"+id).value;
+ if(!alunoId){alert("Selecione um aluno.");return}
+ try{await requisicao(`/turmas/${id}/alunos/${alunoId}`,"POST");carregarTurmas()}
+ catch(e){mostrarErro(e)}
+}
+async function removerAluno(id){
+ const alunoId=document.getElementById("remover-"+id).value;
+ if(!alunoId){alert("Selecione um aluno.");return}
+ try{await requisicao(`/turmas/${id}/alunos/${alunoId}`,"DELETE");carregarTurmas()}
+ catch(e){mostrarErro(e)}
+}
+
+carregarTudo();
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
-
 package com.escoladesurf.escola_surf_api;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,31 +22,45 @@ public class AlunoController {
     }
 
     @GetMapping("/{id}")
-    public Aluno buscarPorId(@PathVariable Long id) {
-        return service.buscarPorId(id).orElse(null);
+    public ResponseEntity<Aluno> buscarPorId(@PathVariable Long id) {
+        return service.buscarPorId(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Aluno cadastrar(@RequestBody Aluno aluno) {
-        return service.salvar(aluno);
+    public ResponseEntity<Aluno> cadastrar(@RequestBody Aluno aluno) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(service.salvar(aluno));
     }
 
     @PutMapping("/{id}")
-    public Aluno atualizar(
+    public ResponseEntity<Aluno> atualizar(
             @PathVariable Long id,
             @RequestBody Aluno aluno) {
 
-        return service.buscarPorId(id).map(alunoExistente -> {
-            alunoExistente.setNome(aluno.getNome());
-            alunoExistente.setEmail(aluno.getEmail());
-            alunoExistente.setNivel(aluno.getNivel());
+        Aluno alunoExistente = service.buscarPorId(id).orElse(null);
 
-            return service.salvar(alunoExistente);
-        }).orElse(null);
+        if (alunoExistente == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        alunoExistente.setNome(aluno.getNome());
+        alunoExistente.setEmail(aluno.getEmail());
+        alunoExistente.setNivel(aluno.getNivel());
+
+        return ResponseEntity.ok(service.salvar(alunoExistente));
     }
 
     @DeleteMapping("/{id}")
-    public void excluir(@PathVariable Long id) {
+    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+
+        if (service.buscarPorId(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
         service.excluir(id);
+
+        return ResponseEntity.noContent().build();
     }
 }
