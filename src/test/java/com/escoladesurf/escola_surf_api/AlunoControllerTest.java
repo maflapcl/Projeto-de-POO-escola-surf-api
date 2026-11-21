@@ -42,7 +42,7 @@ class AlunoControllerTest {
         mockMvc.perform(post("/alunos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(alunoJson))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.nome").value("Aluno Teste"))
                 .andExpect(jsonPath("$.email").value("alunoteste@email.com"))
                 .andExpect(jsonPath("$.nivel").value("Iniciante"));
@@ -99,7 +99,7 @@ class AlunoControllerTest {
         Aluno salvo = alunoRepository.save(aluno);
 
         mockMvc.perform(delete("/alunos/" + salvo.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         assertFalse(alunoRepository.existsById(salvo.getId()));
     }
