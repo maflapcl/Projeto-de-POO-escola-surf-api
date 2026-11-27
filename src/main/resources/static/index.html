@@ -97,19 +97,54 @@ function abrir(id){
  carregarTudo();
 }
 
-async function requisicao(url, metodo="GET", dados=null){
- const opcoes={method:metodo,headers:{"Content-Type":"application/json"}};
- if(dados) opcoes.body=JSON.stringify(dados);
- const resposta=await fetch(api+url,opcoes);
- if(!resposta.ok){
-  const erro=await resposta.text();
-  throw new Error(erro || "Não foi possível realizar a operação.");
- }
- if(resposta.status===204) return null;
- return resposta.json();
+
+async function requisicao(url, metodo = "GET", dados = null) {
+    const opcoes = {
+        method: metodo,
+        headers: {
+            "Content-Type": "application/json"
+        }
+    };
+
+    if (dados) {
+        opcoes.body = JSON.stringify(dados);
+    }
+
+    const resposta = await fetch(api + url, opcoes);
+
+    if (!resposta.ok) {
+        let mensagem = "Não foi possível realizar a operação.";
+
+        try {
+            const erro = await resposta.json();
+
+            if (erro.message) {
+                mensagem = erro.message;
+            } else if (resposta.status === 409) {
+                mensagem = "A operação não pôde ser realizada devido a um conflito.";
+            } else if (resposta.status === 404) {
+                mensagem = "Registro não encontrado.";
+            } else if (resposta.status === 400) {
+                mensagem = "Verifique os dados informados.";
+            }
+        } catch {
+            mensagem = "Não foi possível realizar a operação.";
+        }
+
+        throw new Error(mensagem);
+    }
+
+    if (resposta.status === 204) {
+        return null;
+    }
+
+    return resposta.json();
 }
 
-function mostrarErro(erro){alert("Erro: "+erro.message)}
+
+function mostrarErro(erro) {
+    alert(erro.message);
+}
 function confirmarExclusao(){return confirm("Deseja realmente excluir?")}
 
 async function carregarTudo(){

@@ -113,37 +113,54 @@ Crie o banco de dados:
 CREATE DATABASE escola_surf;
 ```
 
+
 ### application.properties
 
-Crie o arquivo `src/main/resources/application.properties` com suas
-configurações locais:
+O projeto disponibiliza o arquivo `application-example.properties`
+como modelo de configuração.
 
-``` properties
-spring.application.name=escola-surf-api
-spring.datasource.url=jdbc:mysql://localhost:3306/escola_surf
-spring.datasource.username=root
-spring.datasource.password=SUA_SENHA
+No PowerShell, execute:
 
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
+```powershell
+Copy-Item .\src\main\resources\application-example.properties .\src\main\resources\application.properties
 ```
 
-Substitua `SUA_SENHA` pela senha do seu MySQL.
+Configure as variáveis de ambiente com as credenciais do MySQL:
 
-**Importante:** o arquivo `application.properties` deve permanecer local
-e está listado no `.gitignore` para evitar o envio de credenciais ao
-GitHub.
+```powershell
+$env:DB_USERNAME="root"
+$env:DB_PASSWORD="SUA_SENHA"
+```
+
+Substitua os valores pelas credenciais do seu MySQL.
+
+As variáveis de ambiente devem ser configuradas no mesmo terminal
+utilizado para executar a aplicação e os testes.
+
+**Importante:** o arquivo `application.properties` está listado
+no `.gitignore` para evitar o envio de credenciais ao GitHub.
+
 
 ## Como executar
 
-Na pasta raiz do projeto, execute:
+Certifique-se de que o serviço do MySQL esteja ativo e que
+as variáveis de ambiente estejam configuradas.
 
-``` powershell
-cmd /c mvnw.cmd spring-boot:run
+Na pasta raiz do projeto, execute no PowerShell:
+
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
 
-A API ficará disponível em `http://localhost:8080`.
+O projeto utiliza o Maven Wrapper, dispensando a instalação
+manual do Maven.
+
+A API e a interface web estarão disponíveis em:
+
+http://localhost:8080
+
+A interface permite gerenciar alunos, instrutores, aulas,
+turmas e matrículas diretamente pelo navegador.
 
 ## Testes automatizados
 
@@ -164,8 +181,33 @@ erros.
 Para executar os testes novamente:
 
 ``` powershell
-cmd /c mvnw.cmd test
+.\mvnw.cmd clean test
 ```
+
+Os testes utilizam o banco de dados MySQL configurado na aplicação.
+Recomenda-se utilizar um banco exclusivo para testes, evitando
+alterações indesejadas nos dados de utilização do sistema.
+
+
+## Tratamento de exceções
+
+O projeto utiliza a classe `GlobalExceptionHandler` para
+centralizar o tratamento de exceções do tipo `ResponseStatusException`,
+utilizando as anotações `@RestControllerAdvice` e `@ExceptionHandler`.
+
+O sistema retorna códigos HTTP acompanhados de mensagens
+personalizadas.
+
+| Código HTTP | Mensagem |
+|---|---|
+| 404 | Aluno não encontrado |
+| 404 | Turma não encontrada |
+| 409 | Aluno já está matriculado nesta turma |
+| 409 | Turma sem vagas disponíveis |
+| 409 | Aluno não está matriculado nesta turma |
+
+A interface web interpreta essas respostas e apresenta mensagens claras ao usuário, facilitando a utilização do sistema.
+
 
 ## Autoria
 
